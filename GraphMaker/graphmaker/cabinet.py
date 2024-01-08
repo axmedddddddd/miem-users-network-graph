@@ -8,19 +8,10 @@ from typing import List, Tuple
 import requests
 from tqdm import tqdm
 
-from graphmaker import config
 
-
-def api_call(method: str, dict_params: dict = {}, str_param: str = ""):
+def api_call(method: str, str_param: str = ""):
     url = f"{config.BASE_URL}/{method}/{str_param}"
-    r = requests.get(
-        url,
-        headers={
-            "accept": "application/json",
-            "X-Auth-Token": config.CABINET_API_TOKEN,
-        },
-        params=dict_params,
-    )
+    r = requests.get(url)
     json = r.json()
     if json["message"] == "OK":
         return json["data"]
@@ -30,17 +21,11 @@ def api_call(method: str, dict_params: dict = {}, str_param: str = ""):
 
 def parse_projects() -> dict:
     """Получение данных о проектах"""
-    response = api_call("projects")
-    return response
-
-
-def filter_by_working(data: dict) -> List[dict]:
-    data = [p for p in data if p["statusDesc"] == "Рабочий"]
-    return data
-
+    response = api_call("projects?statusIds[]=2")
+    return response["projects"]
 
 def project_team(project_id: int) -> Tuple[int, dict]:
-    team = api_call("project/students", str_param=project_id, dict_params={})
+    team = api_call("project/students", str_param=project_id)
     team = team["activeMembers"]
     return project_id, team
 
@@ -56,7 +41,6 @@ def detailed_project_info(pid: str, return_field: str = None):
 
 def parse_from_cabinet():
     data = parse_projects()
-    data = filter_by_working(data)
 
     pids = [i["id"] for i in data]
     teams = {}
@@ -104,7 +88,6 @@ def get_projects():
 
     # if todays file does not exist
     try:
-        raise EnvironmentError
         data = parse_from_cabinet()
         with open(projects_filename_path, "w") as f:
             json.dump(data, f, ensure_ascii=False)
