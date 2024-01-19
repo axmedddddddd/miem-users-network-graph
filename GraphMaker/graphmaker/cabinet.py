@@ -8,9 +8,13 @@ from typing import List, Tuple
 import requests
 from tqdm import tqdm
 
+import pandas as pd
+import clickhouse_connect
+
+BASE_URL = "https://cabinet.miem.hse.ru/public-api"
 
 def api_call(method: str, str_param: str = ""):
-    url = f"{config.BASE_URL}/{method}/{str_param}"
+    url = f"{BASE_URL}/{method}/{str_param}"
     r = requests.get(url)
     json = r.json()
     if json["message"] == "OK":
@@ -21,7 +25,7 @@ def api_call(method: str, str_param: str = ""):
 
 def parse_projects() -> dict:
     """Получение данных о проектах"""
-    response = api_call("projects?statusIds[]=2")
+    response = api_call("projects?statusIds[]=2&limit=1000")
     return response["projects"]
 
 def project_team(project_id: int) -> Tuple[int, dict]:
@@ -72,35 +76,79 @@ def parse_from_cabinet():
                 continue
 
     return data
+ 
+ def json_to_dataframe(json_data):
+    # If input is not empty
+    if json_data:
+        # Initialize list for data
+        data_list = []
+        # Iterate through each project
+        for project in json_data:
+            # Initialize dict for project data
+            project_dict = {}
+            # Iterate through each attribute
+            for key, value in project.items():
+                # If attribute is a list or dict, convert to string
+                if type(value) in [list, dict]:
+                    value = str(value)
+                # Add attribute to project dict
+                project_dict[key] = value
+            # Add project data to data list
+            data_list.append(project_dict)
 
+        # Create DataFrame
+        df = pd.DataFrame(data_list).astype(str)
+        
+        return df
+    
+    # If input is empty
+    else:
+        print("Input JSON is empty")
+        return pd.DataFrame()  # return an empty dataframe
+    
+df = json_to_dataframe(parse_from_cabinet())
+    
+host = "10.120.1.11"
+username = "amarbuliev"
+password = "KuUNgVlPQiSN6dRqk"
 
-def get_projects():
-    now = datetime.datetime.now()
-    day = now.day
-    month = now.month
-    year = now.year
+client = clickhouse_connect.get_client(host=host, port=8123, username=username, password=password)
 
-    projects_filename = f"projects_{day}_{month}_{year}.json"
-    projects_filename_path = f"{config.ROOT_DIR}/data/{projects_filename}"
-    if os.path.exists(projects_filename_path):
-        with open(projects_filename_path, "r") as f:
-            return json.load(f)
+client.command('DROP TABLE sandbox.ongoing_projects')
 
-    # if todays file does not exist
-    try:
-        data = parse_from_cabinet()
-        with open(projects_filename_path, "w") as f:
-            json.dump(data, f, ensure_ascii=False)
-    except:
-        all_projects_caches = glob.glob(f"{config.ROOT_DIR}/data/projects*")
-        with open(all_projects_caches[-1], "r") as f:
-            return json.load(f)
+client.command("""
+CREATE TABLE sandbox.ongoing_projects 
+(
+    id UInt64,
+    status String,
+    statusDesc String,
+    nameRus String,
+    head String,
+    directionHead String,
+    type String,
+    typeDesc String,
+    typeId UInt64,
+    statusId UInt64,
+    dateCreated String,
+    vacancies UInt64,
+    team String,
+    vacancyData String,
+    number UInt64,
+    hoursCount UInt64,
+    initiatorEmail String,
+    payed Bool,
+    projectOfficeControl Bool,
+    studentsCount UInt64,
+    searchString String,
+    clientLogo String,
+    detailed_team String,
+    projectIndustryLabel String,
+    leaders String,
+    initiatorId Float64,
+    thumbnail String
+) 
+ENGINE = MergeTree 
+ORDER BY id
+""")
 
-    return data
-
-
-if __name__ == "__main__":
-    from pprint import pprint
-
-    data = get_projects()
-    print(data[0])
+client.insert_df(table='sandbox.ongoing_projects', df=df)

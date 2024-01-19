@@ -7,7 +7,10 @@ import networkx as nx
 import json
 import numpy as np
 
-from graphmaker import cabinet, graph, models, config
+import cabinet
+import graph
+import models
+import config
 
 palette = [
     "#001219",
@@ -172,11 +175,11 @@ def make_graph(group_by: str = GroupChoices.INDUSTRY_LABEL) -> nx.Graph:
 
             color = get_color(group_to_id[edge.group], palette)
             g.add_edge(
-                edge.source.id,
-                edge.target.id,
+                str(edge.source.id),  # Convert to string
+                str(edge.target.id),  # Convert to string
                 width=edge.width,
-                group=edge.group,
-                group_id=group_to_id[edge.group],
+                group=str(edge.group),  # Convert to string
+                group_id=str(group_to_id[edge.group]),  # Convert to string
                 color=color,
                 label=edge.group,
             )
@@ -199,7 +202,6 @@ def make_graph(group_by: str = GroupChoices.INDUSTRY_LABEL) -> nx.Graph:
 
         g.nodes[target]["label"] = target_node.name
         g.nodes[target]["title"] = f"{target_node.name}</br>{target_node.type}"
-        # g.nodes[target]["type"] = target_node.type
         g.nodes[target]["color"] = data["color"]
         g.nodes[target]["shape"] = "square"
         g.nodes[target]["size"] = min(max([g.degree(target) / 2, 2]), 10)
@@ -256,9 +258,9 @@ def formatted_graph(group: graph.GroupChoices, save_json: bool = False):
 
         if source not in exists_nodes:
             source_node = models.Node(
-                key=source,
+                key=str(source),
                 label=source_node["label"],
-                cluster=data["group_id"],
+                cluster=str(data["group_id"]),
                 x=x_source,
                 y=y_source,
                 tag="Person",
@@ -270,9 +272,9 @@ def formatted_graph(group: graph.GroupChoices, save_json: bool = False):
 
         if target not in exists_nodes:
             target_node = models.Node(
-                key=target,
+                key=str(target),
                 label=target_node["label"],
-                cluster=data["group_id"],
+                cluster=str(data["group_id"]),
                 x=x_target,
                 y=y_target,
                 tag="Tool",
@@ -283,7 +285,7 @@ def formatted_graph(group: graph.GroupChoices, save_json: bool = False):
             exists_nodes.add(target)
 
         cluster = models.Cluster(
-            key=data["group_id"], color=data["color"], clusterLabel=data["group"]
+            key=str(data["group_id"]), color=data["color"], clusterLabel=data["group"]
         )
         clusters.add(cluster)
 
