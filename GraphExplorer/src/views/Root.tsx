@@ -19,7 +19,6 @@ import { GrClose } from "react-icons/gr";
 import { BiRadioCircleMarked, BiBookContent } from "react-icons/bi";
 import { BsArrowsFullscreen, BsFullscreenExit, BsZoomIn, BsZoomOut } from "react-icons/bs";
 
-import graphData from '../miem_dataset.json'
 import {log} from "util";
 
 const Root: FC = () => {
@@ -39,9 +38,9 @@ const Root: FC = () => {
       let dataSetFile = () => {
           switch (stateDataSet){
               case '2':
-                  return 'meim_id_graph.json'
+                  return 'miem_id_graph.json'
               case '1':
-                  return 'meim_projectIndustryLabel_graph.json'
+                  return 'miem_projectIndustryLabel_graph.json'
           }
       }
     fetch(`${process.env.PUBLIC_URL}/data/${dataSetFile()}`)

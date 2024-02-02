@@ -85,8 +85,8 @@ const ClustersPanel: FC<{
       <div>
         <span style={{marginRight: '10px'}}>Кластеризация по признаку:</span>
         <select onChange={(e) => {switchDataSet(e.target.value)}} id="selectClustering">
-          <option value="1" selected>ID проекта</option>
-          <option value="2">Отрасль проекта</option>
+          <option value="1" selected>Отрасль проекта</option>
+          <option value="2">ID проекта</option>
           {/* <option value="3">DataSet3</option>
           <option value="4">DataSet4</option> */}
         </select>
