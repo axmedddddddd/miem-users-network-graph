@@ -292,7 +292,7 @@ def formatted_graph(group: graph.GroupChoices, save_json: bool = False):
     response = models.Response(nodes=nodes, edges=edges, clusters=clusters, tags=tags)
 
     if save_json:
-        with open(f"{config.ROOT_DIR}/data/meim_{group}_graph.json", "w") as f:
+        with open(f"{config.ROOT_DIR}/data/miem_{group}_graph.json", "w", encoding="utf-8") as f:
             json.dump(response.dict(), f, ensure_ascii=False)
 
     return response
