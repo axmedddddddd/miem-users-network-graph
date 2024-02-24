@@ -1,16 +1,17 @@
 from dataclasses import dataclass
 from datetime import datetime
-from functools import lru_cache
 from math import floor
 import igraph as ig
 import networkx as nx
 import json
 import numpy as np
+import ast
+import os
 
-import cabinet
 import graph
 import models
 import config
+import clickhouse_connection
 
 palette = [
     "#001219",
@@ -25,6 +26,35 @@ palette = [
     "#9b2226",
 ]
 
+def correct_json_format(json_string):
+    # Example of extending the replacement strategy, if needed
+    corrected_string = json_string.replace("'", "\"")
+    # Further corrections can be added here if necessary
+    return corrected_string
+
+def get_data_from_db():
+    connection_manager = clickhouse_connection.ClickHouseConnection(
+        host=config.ch_host, username=config.ch_username, password=config.ch_password)
+    df = connection_manager.read_sql("SELECT * FROM sandbox.ongoing_projects")
+    dict_data = df.to_dict(orient='records')
+
+    # Fields known to contain stringified JSON
+    json_fields = ['team', 'vacancyData', 'detailed_team', 'leaders']
+    
+    for record in dict_data:
+        for field in json_fields:
+            if field in record and record[field]:
+                try:
+                    # Attempt to parse with simple correction
+                    record[field] = json.loads(correct_json_format(record[field]))
+                except json.JSONDecodeError:
+                    try:
+                        # Fallback to ast.literal_eval
+                        record[field] = ast.literal_eval(record[field])
+                    except (ValueError, SyntaxError) as e:
+                        print(f"Error evaluating JSON for {field} in record {record.get('id', 'Unknown')}: {e}")
+
+    return dict_data
 
 @dataclass
 class GroupChoices:
@@ -155,9 +185,8 @@ def extract_edges(project_data: dict, group_by: GroupChoices):
     return edges, all_nodes, project_node
 
 
-@lru_cache(maxsize=5)
 def make_graph(group_by: str = GroupChoices.INDUSTRY_LABEL) -> nx.Graph:
-    data = cabinet.get_projects()
+    data = get_data_from_db()
 
     g = nx.DiGraph()
     nodes = {}
@@ -221,7 +250,6 @@ def get_color(n, palette):
     return color
 
 
-@lru_cache(maxsize=5)
 def formatted_graph(group: graph.GroupChoices, save_json: bool = False):
     g = graph.make_graph(group_by=group)
     g = nx.relabel.convert_node_labels_to_integers(g, label_attribute="node_id")
@@ -292,7 +320,10 @@ def formatted_graph(group: graph.GroupChoices, save_json: bool = False):
     response = models.Response(nodes=nodes, edges=edges, clusters=clusters, tags=tags)
 
     if save_json:
-        with open(f"{config.ROOT_DIR}/data/miem_{group}_graph.json", "w", encoding="utf-8") as f:
+        new_base_dir = config.ROOT_DIR.replace("GraphMaker\graphmaker", "GraphExplorer\public")
+        new_path = os.path.join(new_base_dir, "data", f"miem_{group}_graph.json")
+        
+        with open(new_path, "w", encoding="utf-8") as f:
             json.dump(response.dict(), f, ensure_ascii=False)
 
     return response

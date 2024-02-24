@@ -1,52 +1,59 @@
-import React, { FC } from "react";
-import { BsInfoCircle } from "react-icons/bs";
+import React from 'react';
+// Importing icon components from 'react-icons'
+import { BsInfoCircle } from 'react-icons/bs';
+import { MdDeveloperMode, MdCode, MdPoll, MdLibraryBooks } from 'react-icons/md';
+// Importing Panel component from a relative path
+import Panel from './Panel';
 
-import Panel from "./Panel";
+const DescriptionPanel = () => (
+  <Panel initiallyDeployed title={<BsInfoCircle className="text-muted"> Обзор</BsInfoCircle>}>
+    <h1>Граф пользователей МИЭМ</h1>
+    <p>Интерактивное визуальное представление проектной активности участников МИЭМ</p>
+    <ProjectSource />
+    <WorkingPrinciple />
+    <DataAccess />
+  </Panel>
+);
 
-const DescriptionPanel: FC = () => {
+// Extract Project Source Information as a separate component for better readability
+// Extract Project Source Information as a separate component for better readability
+function ProjectSource() {
   return (
-    <Panel
-      initiallyDeployed
-      title={
-        <>
-          <BsInfoCircle className="text-muted" /> Описание
-        </>
-      }
-    >
+    <>
       <p>
-        <h1>Граф пользователей МИЭМ</h1>
-
-        <p>Визуальное представление участников проектной деятельности МИЭМ.</p>
-
-        <p><mark>Исходный код</mark> - <a href="https://git.miem.hse.ru/400/miem-users-network">GitLab</a></p>
-        <p><mark>Разрабочик</mark> - aesaparov@edu.hse.ru</p>
-
-        <h2>Описание работы</h2>
-
-        <p>Из <a href="https://devcabinet.miem.vmnet.top/api/doc">API</a> кабинета МИЭМ берутся данные о текущах, т.е.
-          активных,
-          проектах.
-        </p>
-
-        <h3>Построение графа</h3>
-
-        <p>По собранной информации строится граф, в котором</p>
-        <p>
-          <ul>
-            <li><strong>вершины</strong> - участники проектной деятельности (как руководители проектов, так и
-              непосредственно исполнители)</li>
-            <li><strong>связи</strong> между вершинами задаются если два человека числятся в одном проекте</li>
-          </ul>
-        </p>
-
-        <h2>Доступ к API</h2>
-
-        <p>Публичного доступа к API формирования графа сейчас нет, но можно клонировать
-          <a href="https://git.miem.hse.ru/400/miem-users-network">репозиторий</a> и воспользоваться исходным кодом.
-        </p>
+        Исходный код: <a href="https://git.miem.hse.ru/1731/miem_users_network_graph">GitLab</a>
       </p>
-    </Panel>
+      <p>
+        Разработчик: <a href="mailto:amarbuliev@edu.hse.ru">amarbuliev@edu.hse.ru</a>
+      </p>
+      {/* Removed or adjusted the paragraph that adds extra spacing for minimal space */}
+    </>
   );
-};
+}
+
+// Extract How It Works section into a separate component for modularity and maintainability
+function WorkingPrinciple() {
+  return (
+    <>
+      <h2>Как это работает?</h2>
+      <p>Данные активных проектов МИЭМ извлекаются из <a href="https://cabinet.miem.hse.ru/public-api">API кабинета</a></p>
+      <p>Граф строится на основе этих данных, представляя:</p>
+      <ul>
+        <li><strong>Узлы</strong> - это участники проектов, включая как руководителей проектов, так и исполнителей</li>
+        <li><strong>Связи</strong> - создается связь между двумя участниками, если они работают в рамках одного проекта</li>
+      </ul>
+    </>
+  );
+}
+
+// Extract Data Access section into a separate component for better organization
+function DataAccess() {
+  return (
+    <>
+      <h2>Доступ к данным</h2>
+      <p><MdLibraryBooks /> Данные, используемые для построения графа, хранятся в нашем аналитическом хранилище ClickHouse в схеме sandbox, в таблице ongoing_projects</p>
+    </>
+  );
+}
 
 export default DescriptionPanel;
