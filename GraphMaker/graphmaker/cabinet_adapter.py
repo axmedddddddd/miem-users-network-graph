@@ -4,13 +4,10 @@ import json
 import os
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Tuple
-
 import requests
 from tqdm import tqdm
-
 import pandas as pd
 import clickhouse_connect
-
 import config
 
 def api_call(method: str, str_param: str = ""):
@@ -112,7 +109,7 @@ if __name__ == "__main__":
 
     client = clickhouse_connect.get_client(host=config.ch_host, port=config.ch_port, username=config.ch_username, password=config.ch_password)
 
-    client.command('DROP TABLE sandbox.ongoing_projects')
+    client.command('DROP TABLE IF EXISTS sandbox.ongoing_projects')
 
     client.command("""
     CREATE TABLE sandbox.ongoing_projects 
