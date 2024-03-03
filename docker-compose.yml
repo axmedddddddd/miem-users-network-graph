@@ -6,6 +6,14 @@ services:
     image: graphfront
     ports:
       - "8000:5000"
+    volumes:
+      - shared-data:/code/public/data
+
   backend:
     build: ./GraphMaker
     image: graphmaker-backend
+    volumes:
+      - shared-data:/data
+
+volumes:
+  shared-data:

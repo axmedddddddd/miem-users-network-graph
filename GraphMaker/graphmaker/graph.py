@@ -317,8 +317,7 @@ def formatted_graph(group: graph.GroupChoices, save_json: bool = False):
         clusters.add(cluster)
 
     if save_json:
-        new_base_dir = config.ROOT_DIR.replace("GraphMaker\graphmaker", "GraphExplorer\public")
-        new_path = os.path.join(new_base_dir, "data", f"miem_{group}_graph.json")
+        new_path = os.path.join("/data", f"miem_{group}_graph.json")
         
         with open(new_path, "w", encoding="utf-8") as f:
             json.dump(response.dict(), f, ensure_ascii=False)
