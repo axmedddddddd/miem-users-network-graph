@@ -1,11 +1,2 @@
-.vscode
-dist
-node_modules
-Frontend/Frontend.zip
-*.egg-info
-*/config.py
-GraphMaker/graphmaker/__pycache__/
-GraphMaker/notebooks/.ipynb_checkpoints/
-GraphMaker/notebooks/g.html
-GraphMaker/notebooks/graph.pickle
-.idea/
+GraphMaker/__pycache__/
+Tests/.ipynb_checkpoints/
