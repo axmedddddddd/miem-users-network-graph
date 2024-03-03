@@ -6,3 +6,6 @@ services:
     image: graphfront
     ports:
       - "8000:5000"
+  backend:
+    build: ./GraphMaker
+    image: graphmaker-backend

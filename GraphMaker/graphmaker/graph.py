@@ -316,8 +316,6 @@ def formatted_graph(group: graph.GroupChoices, save_json: bool = False):
         )
         clusters.add(cluster)
 
-    response = models.Response(nodes=nodes, edges=edges, clusters=clusters, tags=tags)
-
     if save_json:
         new_base_dir = config.ROOT_DIR.replace("GraphMaker\graphmaker", "GraphExplorer\public")
         new_path = os.path.join(new_base_dir, "data", f"miem_{group}_graph.json")
@@ -325,7 +323,7 @@ def formatted_graph(group: graph.GroupChoices, save_json: bool = False):
         with open(new_path, "w", encoding="utf-8") as f:
             json.dump(response.dict(), f, ensure_ascii=False)
 
-    return response
+    return 
 
 
 if __name__ == "__main__":

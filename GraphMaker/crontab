@@ -1,0 +1,1 @@
+0 7   1 root cd code && python graph.py  varlogcron.log 2&1
