@@ -33,26 +33,42 @@ const Root: FC = () => {
 
   let [stateDataSet, setStateDataSet] = useState('1')
 
-  // Load data on mount:
-  useEffect(() => {
-      let dataSetFile = () => {
-          switch (stateDataSet){
-              case '2':
-                  return 'miem_id_graph.json'
-              case '1':
-                  return 'miem_projectIndustryLabel_graph.json'
-          }
-      }
+	const fetchData = () => {
+	  let dataSetFile = () => {
+		switch (stateDataSet) {
+		  case '2':
+			return 'miem_id_graph.json';
+		  case '1':
+			return 'miem_projectIndustryLabel_graph.json';
+		}
+	  };
+
     fetch(`${process.env.PUBLIC_URL}/data/${dataSetFile()}`)
-      .then((res) => res.json())
-      .then((dataset: Dataset) => {
-        setDataset(dataset);
-        setFiltersState({
-          clusters: mapValues(keyBy(dataset.clusters, "key"), constant(true)),
-          tags: mapValues(keyBy(dataset.tags, "key"), constant(true)),
-        });
-        requestAnimationFrame(() => setDataReady(true));
-      });
+		.then((res) => res.json())
+		.then((dataset: Dataset) => {
+		  setDataset(dataset);
+		  setFiltersState({
+			clusters: mapValues(keyBy(dataset.clusters, "key"), constant(true)),
+			tags: mapValues(keyBy(dataset.tags, "key"), constant(true)),
+		  });
+		  requestAnimationFrame(() => setDataReady(true));
+		});
+	};
+
+  useEffect(() => {
+    // Immediately fetch data when the component mounts
+    fetchData();
+  
+    const interval = setInterval(() => {
+      const now = new Date();
+      // Check if it's Monday and 8 o'clock
+      if (now.getDay() === 1 && now.getHours() === 8) {
+        fetchData();
+      }
+    }, 1000 * 60 * 60); // Check every hour
+    
+    // Cleanup interval on component unmount
+    return () => clearInterval(interval);
   }, [stateDataSet]);
 
   if (!dataset) return null;

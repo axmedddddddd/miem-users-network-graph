@@ -317,17 +317,14 @@ def formatted_graph(group: graph.GroupChoices, save_json: bool = False):
         clusters.add(cluster)
 
     if save_json:
-        new_path = os.path.join("/data", f"miem_{group}_graph.json")
+        path_to_cache = os.path.join("/code/public/data", f"miem_{group}_graph.json")
         
-        with open(new_path, "w", encoding="utf-8") as f:
+        with open(path_to_cache, "w", encoding="utf-8") as f:
             json.dump(response.dict(), f, ensure_ascii=False)
 
-    return 
+    return f"success for {group}"
 
 
 if __name__ == "__main__":
     formatted_graph(group=graph.GroupChoices.INDUSTRY_LABEL, save_json=True)
     formatted_graph(group=graph.GroupChoices.ID, save_json=True)
-    from pprint import pprint
-
-    pprint(graph)

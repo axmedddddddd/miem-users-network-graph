@@ -1,9 +1,9 @@
-version: '3'
+version: '3.7'
 
 services:
   frontend:
-    build: GraphExplorer
-    image: graphfront
+    build: ./GraphExplorer
+    image: graphfront:latest
     ports:
       - "8000:5000"
     volumes:
@@ -11,9 +11,9 @@ services:
 
   backend:
     build: ./GraphMaker
-    image: graphmaker-backend
+    image: graphback:latest
     volumes:
-      - shared-data:/data
+      - shared-data:/code/public/data 
 
 volumes:
   shared-data:

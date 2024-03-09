@@ -147,4 +147,3 @@ if __name__ == "__main__":
     """)
 
     client.insert_df(table='sandbox.ongoing_projects', df=df)
-    print(df)

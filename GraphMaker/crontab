@@ -1,1 +1,3 @@
-0 7   1 root cd code && python graph.py  varlogcron.log 2&1
+0 6 * * 1 cd /code/graphmaker && python3 cabinet_adapter.py >> /var/log/cron.log 2>&1
+0 7 * * 1 cd /code/graphmaker && python3 graph.py >> /var/log/cron.log 2>&1
+0 7 * * 1 cd /code/graphmaker && python3 interests_scrapper.py >> /var/log/cron.log 2>&1
