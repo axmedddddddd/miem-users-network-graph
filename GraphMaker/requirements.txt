@@ -1,10 +1,11 @@
 beautifulsoup4==4.12.3
-clickhouse_connect==0.6.23
 networkx==3.2.1
 numpy==1.26.4
 pandas==2.2.1
-pydantic==2.6.3
+pydantic==2.6.4
+pydantic_settings==2.2.1
 python_igraph==0.11.4
 Requests==2.31.0
-SQLAlchemy==2.0.23
 tqdm==4.66.1
+--extra-index-url https://footprint.auditory.ru/pypi/simple
+footprint_dftools

@@ -9,8 +9,10 @@ import ast
 import os
 import graph
 import models
-import config
-import clickhouse_connection
+from footprint_dftools.clickhouse import clickhouse_connection as ch
+
+from config import BaseConfig
+config = BaseConfig()
 
 palette = [
     "#001219",
@@ -25,16 +27,9 @@ palette = [
     "#9b2226",
 ]
 
-def correct_json_format(json_string):
-    # Example of extending the replacement strategy, if needed
-    corrected_string = json_string.replace("'", "\"")
-    # Further corrections can be added here if necessary
-    return corrected_string
-
 def get_data_from_db():
-    connection_manager = clickhouse_connection.ClickHouseConnection(
-        host=config.ch_host, username=config.ch_username, password=config.ch_password)
-    df = connection_manager.read_sql("SELECT * FROM sandbox.ongoing_projects")
+    client = ch.ClickHouseConnection(host=config.ch_host, port=config.ch_port, username=config.ch_username, password=config.ch_password)
+    df = client.read_database("SELECT * FROM sandbox.ongoing_projects")
     dict_data = df.to_dict(orient='records')
 
     # Fields known to contain stringified JSON
@@ -45,7 +40,7 @@ def get_data_from_db():
             if field in record and record[field]:
                 try:
                     # Attempt to parse with simple correction
-                    record[field] = json.loads(correct_json_format(record[field]))
+                    record[field] = json.loads(record[field].replace("'", "\""))
                 except json.JSONDecodeError:
                     try:
                         # Fallback to ast.literal_eval

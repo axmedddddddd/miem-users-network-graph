@@ -3,9 +3,10 @@ import ast
 import re
 import requests
 from bs4 import BeautifulSoup
-import clickhouse_connect
-import config
-import clickhouse_connection
+from footprint_dftools.clickhouse import clickhouse_connection as ch
+
+from config import BaseConfig
+config = BaseConfig()
 
 def fetch_professional_interests(email_prefix):
     """
@@ -22,15 +23,22 @@ def fetch_professional_interests(email_prefix):
         return []
 
 
-def extract_email_prefixes(df, column_name='leaders'):
+def extract_email_prefixes_and_short_names(df, column_name='leaders'):
     """
-    Extract email prefixes from DataFrame based on specific column containing leaders' information.
+    Extract email prefixes and short names from DataFrame based on a specific column containing leaders' information.
     """
-    email_dict = {}
+    result_dict = {}
     for row in df[column_name]:
         leader_list = ast.literal_eval(row)
         for leader in leader_list:
-            # Check if 'email' is present and is a list. If so, take the first item; otherwise, use it directly.
+            # Construct short_name
+            short_name = f"{leader['last_name']}"
+            if leader["middle_name"] and leader["first_name"]:
+                short_name = f"{leader['last_name']} {leader['first_name'][0]}.{leader['middle_name'][0]}."
+            elif leader["first_name"]:
+                short_name = f"{leader['last_name']} {leader['first_name'][0]}."
+
+            # Extract email
             email = leader.get('email')
             if isinstance(email, list) and email:  # If email is a non-empty list
                 first_email = email[0]  # Take the first item
@@ -39,25 +47,35 @@ def extract_email_prefixes(df, column_name='leaders'):
             else:  # If there is no email or it's not in an expected format
                 first_email = None
             
-            if first_email:  # Only proceed if there's an email to process
+            # Process email to get email prefix
+            if first_email:
                 email_prefix = first_email.split('@')[0]
-                email_dict[leader['id']] = email_prefix
             else:  # Handle cases with no valid email
-                email_dict[leader['id']] = None
-    return email_dict
+                email_prefix = None
+            
+            # Update result dictionary with a tuple containing the email prefix and the short name
+            result_dict[leader['id']] = (email_prefix, short_name)
+
+    return result_dict
 
 
-def enrich_with_interests(email_prefixes):
+def enrich_with_interests(email_prefixes_and_short_names):
     """
     Enrich email prefixes with professional interests.
+    
+    Parameters:
+    - email_prefixes_and_short_names: A dictionary where the key is id, and the value is a tuple of (email_prefix, short_name).
+
+    Returns:
+    - A dictionary with short_name as keys and their associated professional interests as values.
     """
     updated_dict = {}
-    for id, email_prefix in email_prefixes.items():
+    for _, (email_prefix, short_name) in email_prefixes_and_short_names.items():
         if email_prefix:
             interests = fetch_professional_interests(email_prefix)
-            updated_dict[id] = interests
+            updated_dict[short_name] = interests
         else:
-            updated_dict[id] = []
+            updated_dict[short_name] = []
     return updated_dict
 
 
@@ -65,34 +83,23 @@ def prepare_dataframe(interests_dict):
     """
     Prepare the DataFrame from the interests dictionary.
     """
-    data_for_df = [{'teacher_id': id, 'professional_interests': ', '.join(interests) if interests else ''} for id, interests in interests_dict.items()]
+    data_for_df = [{'name': short_name, 'professional_interests': ', '.join(interests) if interests else ''} for id, interests in interests_dict.items()]
     df = pd.DataFrame(data_for_df)
     df['professional_interests'] = df['professional_interests'].apply(lambda x: re.sub(r'\b\d{2}\.\d{2}\.\d{2}\b[^,]*', '', x).replace(' , ', ', ').strip(', '))
     return df
 
 
 def main():
-    connection_manager = clickhouse_connection.ClickHouseConnection(host=config.ch_host, username=config.ch_username, password=config.ch_password)
+    client = ch.ClickHouseConnection(host=config.ch_host, port=config.ch_port, username=config.ch_username, password=config.ch_password)
     
-    df = connection_manager.read_sql("SELECT * FROM sandbox.ongoing_projects")
+    df = client.read_database("SELECT * FROM sandbox.ongoing_projects")
     
-    email_prefixes = extract_email_prefixes(df)
+    email_prefixes = extract_email_prefixes_and_short_names(df)
     interests_dict = enrich_with_interests(email_prefixes)
     final_df = prepare_dataframe(interests_dict)
-    
-    client = clickhouse_connect.get_client(host=config.ch_host, port=config.ch_port, username=config.ch_username, password=config.ch_password)
-    
-    client.command('DROP TABLE IF EXISTS sandbox.professional_interests')
-    client.command("""
-    CREATE TABLE sandbox.professional_interests
-    (
-        teacher_id UInt64,
-        professional_interests String
-    )
-    ENGINE = MergeTree 
-    ORDER BY teacher_id
-    """)
-    client.insert_df('sandbox.professional_interests', final_df)
+
+    client.read_database('TRUNCATE TABLE sandbox.professional_interests')
+    client.write_database(df=final_df, table='professional_interests', schema='sandbox')
 
 
 if __name__ == "__main__":

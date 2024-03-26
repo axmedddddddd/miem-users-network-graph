@@ -7,8 +7,10 @@ from typing import List, Tuple
 import requests
 from tqdm import tqdm
 import pandas as pd
-import clickhouse_connect
-import config
+from footprint_dftools.clickhouse import clickhouse_connection as ch
+
+from config import BaseConfig
+config = BaseConfig()
 
 def api_call(method: str, str_param: str = ""):
     url = f"{config.BASE_URL}/{method}/{str_param}"
@@ -85,7 +87,7 @@ def json_to_dataframe(json_data):
             # Iterate through each attribute
             for key, value in project.items():
                 # If attribute is a list or dict, convert to string
-                if type(value) in [list, dict]:
+                if isinstance(value, list | dict):
                     value = str(value)
                 # Add attribute to project dict
                 project_dict[key] = value
@@ -106,44 +108,8 @@ def json_to_dataframe(json_data):
 if __name__ == "__main__":
     df = json_to_dataframe(parse_from_cabinet())
         
+    client = ch.ClickHouseConnection(host=config.ch_host, port=config.ch_port, username=config.ch_username, password=config.ch_password)
 
-    client = clickhouse_connect.get_client(host=config.ch_host, port=config.ch_port, username=config.ch_username, password=config.ch_password)
+    client.read_database('TRUNCATE TABLE sandbox.ongoing_projects')
 
-    client.command('DROP TABLE IF EXISTS sandbox.ongoing_projects')
-
-    client.command("""
-    CREATE TABLE sandbox.ongoing_projects 
-    (
-        id UInt64,
-        status String,
-        statusDesc String,
-        nameRus String,
-        head String,
-        directionHead String,
-        type String,
-        typeDesc String,
-        typeId UInt64,
-        statusId UInt64,
-        dateCreated String,
-        vacancies UInt64,
-        team String,
-        vacancyData String,
-        number UInt64,
-        hoursCount UInt64,
-        initiatorEmail String,
-        payed Bool,
-        projectOfficeControl Bool,
-        studentsCount UInt64,
-        searchString String,
-        clientLogo String,
-        detailed_team String,
-        projectIndustryLabel String,
-        leaders String,
-        initiatorId Float64,
-        thumbnail String
-    ) 
-    ENGINE = MergeTree 
-    ORDER BY id
-    """)
-
-    client.insert_df(table='sandbox.ongoing_projects', df=df)
+    client.write_database(df=df, table='ongoing_projects', schema='sandbox')
