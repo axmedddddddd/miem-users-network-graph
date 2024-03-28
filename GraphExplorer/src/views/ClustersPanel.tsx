@@ -4,7 +4,7 @@ import { sortBy, values, keyBy, mapValues } from "lodash";
 import { MdGroupWork } from "react-icons/md";
 import { AiOutlineCheckCircle, AiOutlineCloseCircle } from "react-icons/ai";
 
-import { Cluster, FiltersState, NodeData } from "../types";
+import { Cluster, FiltersState } from "../types";
 import Panel from "./Panel";
 import {observer} from "../index";
 
@@ -43,8 +43,6 @@ const ClustersPanel: FC<{
       setVisibleNodesPerCluster(index);
     });
   }, [filters]);
-
-  let [curCluster, setCurCluster] = useState('cluster')
 
   const sortedClusters = useMemo(
     () => sortBy(clusters, (cluster) => -nodesPerCluster[cluster.key]),

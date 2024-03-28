@@ -1,7 +1,6 @@
 import React from 'react';
 // Importing icon components from 'react-icons'
 import { BsInfoCircle } from 'react-icons/bs';
-import { MdDeveloperMode, MdCode, MdPoll, MdLibraryBooks } from 'react-icons/md';
 // Importing Panel component from a relative path
 import Panel from './Panel';
 
@@ -51,7 +50,7 @@ function DataAccess() {
   return (
     <>
       <h2>Доступ к данным</h2>
-      <p><MdLibraryBooks /> Данные, используемые для построения графа, хранятся в нашем аналитическом хранилище ClickHouse в схеме sandbox, в таблице ongoing_projects</p>
+      <p>Данные, используемые для построения графа, хранятся в нашем аналитическом хранилище ClickHouse в схеме sandbox, в таблице ongoing_projects</p>
     </>
   );
 }
