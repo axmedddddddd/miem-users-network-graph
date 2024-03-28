@@ -25,7 +25,7 @@ To install and start the MIEM Users Network Graph, navigate to the root director
 ```docker-compose up```
 
 ## Features
-- Real-time visualization of the MIEM faculty network
+- Real-time visualization of the MIEM faculty projects
 - Interactive graph elements
 - Data caching for improved performance
 - Integrated professional interests of teachers
