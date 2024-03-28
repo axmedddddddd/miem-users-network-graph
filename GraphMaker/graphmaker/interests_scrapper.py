@@ -83,8 +83,8 @@ def prepare_dataframe(interests_dict):
     """
     Prepare the DataFrame from the interests dictionary.
     """
-    data_for_df = [{'name': short_name, 'professional_interests': ', '.join(interests) if interests else ''} for id, interests in interests_dict.items()]
-    df = pd.DataFrame(data_for_df)
+    data = [(name, ', '.join(interests) if interests else '') for name, interests in interests_dict.items()]
+    df = pd.DataFrame(data, columns=['name', 'professional_interests'])
     df['professional_interests'] = df['professional_interests'].apply(lambda x: re.sub(r'\b\d{2}\.\d{2}\.\d{2}\b[^,]*', '', x).replace(' , ', ', ').strip(', '))
     return df
 
@@ -100,7 +100,11 @@ def main():
 
     client.read_database('TRUNCATE TABLE sandbox.professional_interests')
     client.write_database(df=final_df, table='professional_interests', schema='sandbox')
-
+    
+    final_df.set_index('name', inplace=True)
+    path_to_cache = os.path.join("/code/public/data", f"teacher_interests.json")
+    with open(path_to_cache, 'w', encoding='utf-8') as json_file:
+        json.dump(final_df['professional_interests'].to_dict(), json_file, ensure_ascii=False, indent=4)
 
 if __name__ == "__main__":
     main()
