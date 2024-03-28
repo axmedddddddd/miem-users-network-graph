@@ -7,13 +7,13 @@ from typing import List, Tuple
 import requests
 from tqdm import tqdm
 import pandas as pd
-from footprint_dftools.clickhouse import clickhouse_connection as ch
+from footprint_dftools import clickhouse as ch
 
 from config import BaseConfig
 config = BaseConfig()
 
 def api_call(method: str, str_param: str = ""):
-    url = f"{config.BASE_URL}/{method}/{str_param}"
+    url = f"{config.base_url}/{method}/{str_param}"
     r = requests.get(url)
     json = r.json()
     if json["message"] == "OK":
@@ -108,7 +108,7 @@ def json_to_dataframe(json_data):
 if __name__ == "__main__":
     df = json_to_dataframe(parse_from_cabinet())
         
-    client = ch.ClickHouseConnection(host=config.ch_host, port=config.ch_port, username=config.ch_username, password=config.ch_password)
+    client = ch.ClickHouseConnection(host=config.ch_host, port=config.ch_port, username=config.ch_user, password=config.ch_pass)
 
     client.read_database('TRUNCATE TABLE sandbox.ongoing_projects')
 

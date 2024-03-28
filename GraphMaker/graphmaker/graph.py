@@ -9,7 +9,7 @@ import ast
 import os
 import graph
 import models
-from footprint_dftools.clickhouse import clickhouse_connection as ch
+from footprint_dftools import clickhouse as ch
 
 from config import BaseConfig
 config = BaseConfig()
@@ -28,7 +28,7 @@ palette = [
 ]
 
 def get_data_from_db():
-    client = ch.ClickHouseConnection(host=config.ch_host, port=config.ch_port, username=config.ch_username, password=config.ch_password)
+    client = ch.ClickHouseConnection(host=config.ch_host, port=config.ch_port, username=config.ch_user, password=config.ch_pass)
     df = client.read_database("SELECT * FROM sandbox.ongoing_projects")
     dict_data = df.to_dict(orient='records')
 
