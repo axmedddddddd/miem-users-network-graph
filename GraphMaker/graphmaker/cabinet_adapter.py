@@ -12,8 +12,12 @@ from footprint_dftools import clickhouse as ch
 from config import BaseConfig
 config = BaseConfig()
 
+
 def api_call(method: str, str_param: str = ""):
-    url = f"{config.base_url}/{method}/{str_param}"
+    if str_param:
+        url = f"{base_url}/{method}/{str_param}"
+    else:
+        url = f"{base_url}/{method}"
     r = requests.get(url)
     json = r.json()
     if json["message"] == "OK":
@@ -26,6 +30,7 @@ def parse_projects() -> dict:
     """Получение данных о проектах"""
     response = api_call("projects?statusIds[]=2&limit=1000")
     return response["projects"]
+
 
 def project_team(project_id: int) -> Tuple[int, dict]:
     team = api_call("project/students", str_param=project_id)
@@ -75,7 +80,8 @@ def parse_from_cabinet():
                 continue
 
     return data
- 
+
+
 def json_to_dataframe(json_data):
     if json_data:
         # Initialize list for data
