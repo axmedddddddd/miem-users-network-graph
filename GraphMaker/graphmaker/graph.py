@@ -311,7 +311,7 @@ def formatted_graph(group: graph.GroupChoices, save_json: bool = False) -> None:
         with open(path_to_cache, "w", encoding="utf-8") as f:
             json.dump(response.dict(), f, ensure_ascii=False)
         
-        logger.info(f"Successfully built graph by {group}")
+        logger.info(f"Successfully built graph by_{group}_{datetime.now()}")
 
     return
 
