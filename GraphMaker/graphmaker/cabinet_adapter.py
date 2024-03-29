@@ -3,7 +3,7 @@ import glob
 import json
 import os
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Tuple
+from typing import List, Tuple, Any, Optional, Dict
 import requests
 from tqdm import tqdm
 import pandas as pd
@@ -12,8 +12,13 @@ from footprint_dftools import clickhouse as ch
 from config import BaseConfig
 config = BaseConfig()
 
+import logging
+logging.basicConfig(filename='backend.log', level=logging.INFO)
+logger = logging.getLogger(name)
 
-def api_call(method: str, str_param: str = ""):
+
+def api_call(method: str, str_param: str) -> Optional[Dict[str, Any]]:
+    """Accessing the Cabinet API"""
     if str_param:
         url = f"{base_url}/{method}/{str_param}"
     else:
@@ -27,18 +32,20 @@ def api_call(method: str, str_param: str = ""):
 
 
 def parse_projects() -> dict:
-    """Получение данных о проектах"""
+    """Getting project data"""
     response = api_call("projects?statusIds[]=2&limit=1000")
     return response["projects"]
 
 
 def project_team(project_id: int) -> Tuple[int, dict]:
+    """Getting data about project teams"""
     team = api_call("project/students", str_param=project_id)
     team = team["activeMembers"]
     return project_id, team
 
 
-def detailed_project_info(pid: str, return_field: str = None):
+def detailed_project_info(pid: str, return_field: Optional[str] = None) -> Tuple[str, Any]:
+    """Details of project data"""
     r = requests.get(f"https://cabinet.miem.hse.ru/public-api/project/body/{pid}")
     data = r.json()["data"]
     if return_field is None:
@@ -47,7 +54,8 @@ def detailed_project_info(pid: str, return_field: str = None):
         return pid, data[return_field]
 
 
-def parse_from_cabinet():
+def parse_from_cabinet() -> Dict[str, Any]:
+    """Details of project data"""
     data = parse_projects()
 
     pids = [i["id"] for i in data]
@@ -82,33 +90,25 @@ def parse_from_cabinet():
     return data
 
 
-def json_to_dataframe(json_data):
+def json_to_dataframe(json_data: Dict[str, Any]) -> pd.DataFrame:
+    """Creating a dataframe to upload to ClickHouse"""
     if json_data:
-        # Initialize list for data
         data_list = []
-        # Iterate through each project
         for project in json_data:
-            # Initialize dict for project data
             project_dict = {}
-            # Iterate through each attribute
             for key, value in project.items():
-                # If attribute is a list or dict, convert to string
-                if isinstance(value, list | dict):
+                if isinstance(value, (list, dict)):
                     value = str(value)
-                # Add attribute to project dict
                 project_dict[key] = value
-            # Add project data to data list
             data_list.append(project_dict)
 
-        # Create DataFrame
         df = pd.DataFrame(data_list).astype(str)
         
         return df
-    
-    # If input is empty
+
     else:
-        print("Input JSON is empty")
-        return pd.DataFrame()  # return an empty dataframe
+        logger.warning("adapter input JSON is empty")
+        return pd.DataFrame()
 
 
 if __name__ == "__main__":

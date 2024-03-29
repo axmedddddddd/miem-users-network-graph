@@ -9,10 +9,15 @@ import ast
 import os
 import graph
 import models
+from typing import List, Tuple, Any, Dict
 from footprint_dftools import clickhouse as ch
 
 from config import BaseConfig
 config = BaseConfig()
+
+import logging
+logging.basicConfig(filename='backend.log', level=logging.INFO)
+logger = logging.getLogger(name)
 
 palette = [
     "#001219",
@@ -27,28 +32,6 @@ palette = [
     "#9b2226",
 ]
 
-def get_data_from_db():
-    client = ch.ClickHouseConnection(host=config.ch_host, port=config.ch_port, username=config.ch_user, password=config.ch_pass)
-    df = client.read_database("SELECT * FROM sandbox.ongoing_projects")
-    dict_data = df.to_dict(orient='records')
-
-    # Fields known to contain stringified JSON
-    json_fields = ['team', 'vacancyData', 'detailed_team', 'leaders']
-    
-    for record in dict_data:
-        for field in json_fields:
-            if field in record and record[field]:
-                try:
-                    # Attempt to parse with simple correction
-                    record[field] = json.loads(record[field].replace("'", "\""))
-                except json.JSONDecodeError:
-                    try:
-                        # Fallback to ast.literal_eval
-                        record[field] = ast.literal_eval(record[field])
-                    except (ValueError, SyntaxError) as e:
-                        print(f"Error evaluating JSON for {field} in record {record.get('id', 'Unknown')}: {e}")
-
-    return dict_data
 
 @dataclass
 class GroupChoices:
@@ -57,7 +40,30 @@ class GroupChoices:
     INDUSTRY_LABEL = "projectIndustryLabel"
 
 
-def get_color(n, palette):
+def get_data_from_db() -> Dict[str, Any]:
+    """Fetching table from CH"""
+    client = ch.ClickHouseConnection(host=config.ch_host, port=config.ch_port, username=config.ch_user, password=config.ch_pass)
+    df = client.read_database("SELECT * FROM sandbox.ongoing_projects")
+    dict_data = df.to_dict(orient='records')
+
+    json_fields = ['team', 'vacancyData', 'detailed_team', 'leaders']
+    
+    for record in dict_data:
+        for field in json_fields:
+            if field in record and record[field]:
+                try:
+                    record[field] = json.loads(record[field].replace("'", "\""))
+                except json.JSONDecodeError:
+                    try:
+                        record[field] = ast.literal_eval(record[field])
+                    except (ValueError, SyntaxError) as e:
+                        print(f"Error evaluating JSON for {field} in record {record.get('id', 'Unknown')}: {e}")
+
+    return dict_data
+
+
+def get_color(n: int, palette: List[str]) -> str:
+    """Get color for node based on tis key"""
     palette_size = len(palette)
 
     if n >= palette_size:
@@ -69,9 +75,9 @@ def get_color(n, palette):
     return color
 
 
-def extract_edges(project_data: dict, group_by: GroupChoices):
+def extract_edges(project_data: dict, group_by: GroupChoices) -> Tuple[Any, Any, Any]:
+    """Construct all the nodes and edges"""
     team = project_data["detailed_team"]
-    # team = [i for i in team if not i["endDate"]]
 
     leaders = project_data["leaders"]
 
@@ -180,6 +186,7 @@ def extract_edges(project_data: dict, group_by: GroupChoices):
 
 
 def make_graph(group_by: str = GroupChoices.INDUSTRY_LABEL) -> nx.Graph:
+    """Make raw graph"""
     data = get_data_from_db()
 
     g = nx.DiGraph()
@@ -187,7 +194,6 @@ def make_graph(group_by: str = GroupChoices.INDUSTRY_LABEL) -> nx.Graph:
     project_nodes = {}
     group_to_id = {}
 
-    # конструирование связей
     for project in data:
         project_edges, project_team, project_node = extract_edges(
             project, group_by=group_by
@@ -218,7 +224,6 @@ def make_graph(group_by: str = GroupChoices.INDUSTRY_LABEL) -> nx.Graph:
         g.nodes[source][
             "title"
         ] = f"{source_node.full_name}</br>{source_node.role}</br>{source_node.in_project_duration}"
-        # g.nodes[source]["role"] = source_node.role
         g.nodes[source]["color"] = data["color"]
         g.nodes[source]["shape"] = "disc"
         g.nodes[source]["size"] = min(max([g.degree(source) / 2, 2]), 10)
@@ -232,19 +237,8 @@ def make_graph(group_by: str = GroupChoices.INDUSTRY_LABEL) -> nx.Graph:
     return g
 
 
-def get_color(n, palette):
-    palette_size = len(palette)
-
-    if n >= palette_size:
-        idx = n - (palette_size * floor(n / palette_size))
-        color = palette[idx]
-    else:
-        color = palette[n]
-
-    return color
-
-
-def formatted_graph(group: graph.GroupChoices, save_json: bool = False):
+def formatted_graph(group: graph.GroupChoices, save_json: bool = False) -> None:
+    """Converting graph into proper view and caching as option"""
     g = graph.make_graph(group_by=group)
     g = nx.relabel.convert_node_labels_to_integers(g, label_attribute="node_id")
 
@@ -316,8 +310,10 @@ def formatted_graph(group: graph.GroupChoices, save_json: bool = False):
         
         with open(path_to_cache, "w", encoding="utf-8") as f:
             json.dump(response.dict(), f, ensure_ascii=False)
+        
+        logger.info(f"Successfully built graph by {group}")
 
-    return f"success for {group}"
+    return
 
 
 if __name__ == "__main__":

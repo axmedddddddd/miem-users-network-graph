@@ -10,5 +10,6 @@ tqdm==4.66.1
 clickhouse-sqlalchemy
 clickhouse-driver
 sqlalchemy
+logging
 --extra-index-url https://footprint.auditory.ru/pypi/simple
 footprint_dftools
