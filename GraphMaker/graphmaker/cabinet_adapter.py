@@ -17,7 +17,7 @@ logging.basicConfig(filename='backend.log', level=logging.INFO)
 logger = logging.getLogger(name)
 
 
-def api_call(method: str, str_param: str) -> Optional[Dict[str, Any]]:
+def api_call(method: str, str_param: str="") -> Optional[Dict[str, Any]]:
     """Accessing the Cabinet API"""
     if str_param:
         url = f"{base_url}/{method}/{str_param}"
