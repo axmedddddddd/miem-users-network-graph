@@ -1,6 +1,12 @@
 version: '3.7'
 
 services:
+  backend:
+    build: ./GraphMaker
+    image: graphback:latest
+    volumes:
+      - shared-data:/code/public/data
+
   frontend:
     build: ./GraphExplorer
     image: graphfront:latest
@@ -8,12 +14,6 @@ services:
       - "8000:5000"
     volumes:
       - shared-data:/code/public/data
-
-  backend:
-    build: ./GraphMaker
-    image: graphback:latest
-    volumes:
-      - shared-data:/code/public/data 
 
 volumes:
   shared-data:

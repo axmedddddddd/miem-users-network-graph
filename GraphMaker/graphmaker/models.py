@@ -140,3 +140,9 @@ class Cluster(BaseModel):
 class Tag(BaseModel):
     key: str
     image: str
+
+class Response(BaseModel):
+    nodes: list[Node]
+    edges: list[list]
+    clusters: list[Cluster]
+    tags: list[Tag]

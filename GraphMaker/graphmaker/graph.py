@@ -17,7 +17,7 @@ config = BaseConfig()
 
 import logging
 logging.basicConfig(filename='backend.log', level=logging.INFO)
-logger = logging.getLogger(name)
+logger = logging.getLogger()
 
 palette = [
     "#001219",
@@ -73,6 +73,18 @@ def get_color(n: int, palette: List[str]) -> str:
         color = palette[n]
 
     return color
+    
+def get_short_name(fullName):
+    name_parts = fullName.split()
+
+    if len(name_parts) >= 3:
+        short_name = f"{name_parts[0]} {name_parts[1][0]}.{name_parts[2][0]}."
+    elif len(name_parts) == 2:
+        short_name = f"{name_parts[0]} {name_parts[1][0]}."
+    else:
+        short_name = name_parts[0]
+
+    return short_name
 
 
 def extract_edges(project_data: dict, group_by: GroupChoices) -> Tuple[Any, Any, Any]:
@@ -84,18 +96,13 @@ def extract_edges(project_data: dict, group_by: GroupChoices) -> Tuple[Any, Any,
     team_nodes = []
     for member in team:
         full_name = member["fullName"]
-
-        if member["middle_name"] and member["first_name"]:
-            short_name = f"{member['last_name']} {member['first_name'][0]}.{member['middle_name'][0]}"
-        elif member["first_name"]:
-            short_name = f"{member['last_name']} {member['first_name'][0]}."
-        else:
-            short_name = f"{member['last_name']}"
+        
+        short_name = get_short_name(full_name)
 
         if full_name is None:
             continue
 
-        user_id = f"user_{member['userId']}"
+        user_id = f"user_{member['id']}"
         role = member["role"]
 
         try:
@@ -304,7 +311,9 @@ def formatted_graph(group: graph.GroupChoices, save_json: bool = False) -> None:
             key=str(data["group_id"]), color=data["color"], clusterLabel=data["group"]
         )
         clusters.add(cluster)
-
+    
+    response = models.Response(nodes=nodes, edges=edges, clusters=clusters, tags=tags)
+    
     if save_json:
         path_to_cache = os.path.join("/code/public/data", f"miem_{group}_graph.json")
         

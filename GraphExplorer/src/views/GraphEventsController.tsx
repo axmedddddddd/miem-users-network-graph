@@ -1,67 +1,72 @@
 import { useRegisterEvents, useSigma } from "react-sigma-v2";
-import React, { FC, useEffect, useState } from "react";
+import { FC, useEffect } from "react";
 
 function getMouseLayer() {
   return document.querySelector(".sigma-mouse");
-}
-
-function openTeacherProfile(node: any, graph:any) {
-  const teacherName = node.label; // Assuming 'label' holds the full name
-  const professionalInterests = node.professionalInterests; // Assuming this is the array or object holding the interests
-
-  const profileContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>${teacherName}'s Profile</title>
-      <style>
-        body {
-          font-family: Arial, sans-serif;
-          margin: 20px;
-          padding: 20px;
-          border: 1px solid #ccc;
-        }
-      </style>
-    </head>
-    <body>
-      <h1>${teacherName}</h1>
-      <h2>Professional Interests</h2>
-      <ul>
-        ${Object.keys(professionalInterests).map(interest => <li>${interest}: ${professionalInterests[interest]}</li>).join('')}
-      </ul>
-    </body>
-    </html>
-  `;
-
-  const profileWindow = window.open('', '_blank');
-  if (profileWindow) {
-    profileWindow.document.write(profileContent); // Write the profile content to the new window
-    profileWindow.document.close(); // Close the document for writing
-  }
 }
 
 const GraphEventsController: FC<{ setHoveredNode: (node: string | null) => void }> = ({ setHoveredNode, children }) => {
   const sigma = useSigma();
   const graph = sigma.getGraph();
   const registerEvents = useRegisterEvents();
-  const [teacherInterests, setTeacherInterests] = useState<{[key: string]: string}>({});
 
+  /**
+   * Initialize here settings that require to know the graph and/or the sigma
+   * instance:
+   */
   useEffect(() => {
-    async function fetchTeacherInterests() {
-      try {
-        // Adjust the path to where your JSON is located
-        const response = await fetch(`${process.env.PUBLIC_URL}/data/teacher_interests.json}`);
-        const data = await response.json();
-        setTeacherInterests(data);
-      } catch(error) {
-        console.error("Failed to load teacher interests", error);
-      }
-    }
+    registerEvents({
+		clickNode({ node }) {
+		  const label = graph.getNodeAttribute(node, "label");
+		  const urlAttributeString = graph.getNodeAttribute(node, "URL");
 
-    fetchTeacherInterests();
+		  if (!graph.getNodeAttribute(node, "hidden") && urlAttributeString) {
+			const newWindow = window.open("", "_blank");
 
-    // Your existing events registration code here...
-  }, [registerEvents, graph, setHoveredNode]);
+			if (newWindow) {
+			  // Define a simple HTML template with inline CSS for styling
+			  const htmlContent = `
+				<!DOCTYPE html>
+				<html lang="en">
+				<head>
+				<meta charset="UTF-8">
+				<meta name="viewport" content="width=device-width, initial-scale=1.0">
+				<title>${label}</title>
+				<style>
+				  body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+				  h1 { color: #333; }
+				  p { color: #555; }
+				</style>
+				</head>
+				<body>
+				<h1>${label}</h1>
+				<p>${urlAttributeString}</p>
+				</body>
+				</html>
+			  `;
+
+			  newWindow.document.open();
+			  newWindow.document.write(htmlContent);
+			  newWindow.document.close();
+			} else {
+			  console.error("Failed to open new window");
+			}
+		  }
+		},
+		enterNode({ node }) {
+			setHoveredNode(node);
+			// TODO: Find a better way to get the DOM mouse layer:
+			const mouseLayer = getMouseLayer();
+			if (mouseLayer) mouseLayer.classList.add("mouse-pointer");
+		},
+		leaveNode() {
+			setHoveredNode(null);
+			// TODO: Find a better way to get the DOM mouse layer:
+			const mouseLayer = getMouseLayer();
+			if (mouseLayer) mouseLayer.classList.remove("mouse-pointer");
+      },
+    });
+  }, []);
 
   return <>{children}</>;
 };
