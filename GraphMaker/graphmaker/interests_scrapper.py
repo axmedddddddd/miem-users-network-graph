@@ -9,9 +9,8 @@ from footprint_dftools import clickhouse as ch
 from config import BaseConfig
 config = BaseConfig()
 
-import logging
-logging.basicConfig(filename='backend.log', level=logging.INFO)
-logger = logging.getLogger(name)
+from logger_config import setup_logger
+logger = setup_logger()
 
 def fetch_professional_interests(email_prefix: str) -> List[str]:
     """Get interests info via provided teacher's page url"""
@@ -26,7 +25,7 @@ def fetch_professional_interests(email_prefix: str) -> List[str]:
         return []
 
 
-def extract_email_prefixes_and_short_names(df: pd.DataFrame, column_name: str='leaders') -> Dict[int, Tuple[str, str]]:
+def extract_email_prefixes_and_short_names(df: pd.DataFrame, column_name: str = 'leaders') -> Dict[int, Tuple[str, str]]:
     """Extract email prefixes and short names from DataFrame based on a specific column containing leaders' information"""
     result_dict = {}
     for row in df[column_name]:

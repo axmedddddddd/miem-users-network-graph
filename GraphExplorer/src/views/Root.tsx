@@ -101,6 +101,7 @@ const Root: FC = () => {
                   className="show-contents"
                   onClick={() => setShowContents(true)}
                   title="Show caption and description"
+				  aria-label="Show caption and description"
                 >
                   <BiBookContent />
                 </button>
@@ -124,6 +125,7 @@ const Root: FC = () => {
                   className="ico hide-contents"
                   onClick={() => setShowContents(false)}
                   title="Show caption and description"
+				  aria-label="Show caption and description"
                 >
                   <GrClose />
                 </button>

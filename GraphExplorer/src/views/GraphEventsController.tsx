@@ -19,6 +19,8 @@ const GraphEventsController: FC<{ setHoveredNode: (node: string | null) => void 
 		clickNode({ node }) {
 		  const label = graph.getNodeAttribute(node, "label");
 		  const urlAttributeString = graph.getNodeAttribute(node, "URL");
+		  
+		  console.log(`Node clicked: ${label}, URL: ${urlAttributeString}`); // Debug log
 
 		  if (!graph.getNodeAttribute(node, "hidden") && urlAttributeString) {
 			const newWindow = window.open("", "_blank");
@@ -66,7 +68,7 @@ const GraphEventsController: FC<{ setHoveredNode: (node: string | null) => void 
 			if (mouseLayer) mouseLayer.classList.remove("mouse-pointer");
       },
     });
-  }, []);
+  }, [sigma, graph, registerEvents]);
 
   return <>{children}</>;
 };

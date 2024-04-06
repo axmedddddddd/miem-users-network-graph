@@ -15,9 +15,8 @@ from footprint_dftools import clickhouse as ch
 from config import BaseConfig
 config = BaseConfig()
 
-import logging
-logging.basicConfig(filename='backend.log', level=logging.INFO)
-logger = logging.getLogger()
+from logger_config import setup_logger
+logger = setup_logger()
 
 palette = [
     "#001219",
@@ -320,8 +319,9 @@ def formatted_graph(group: graph.GroupChoices, save_json: bool = False) -> None:
         with open(path_to_cache, "w", encoding="utf-8") as f:
             json.dump(response.dict(), f, ensure_ascii=False)
         
-        logger.info(f"Successfully built graph by_{group}_{datetime.now()}")
-
+        logger.info("Successfully built graph by %s", group)
+    
+    
     return
 
 

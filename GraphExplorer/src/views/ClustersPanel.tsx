@@ -52,6 +52,8 @@ const ClustersPanel: FC<{
   let switchDataSet = (d: string) => {
     setStateDataSet(d)
   }
+  
+  const [selectedDataset, setSelectedDataset] = useState('1'); // default value set to '1'
 
   return (
     <Panel
@@ -82,12 +84,20 @@ const ClustersPanel: FC<{
       </p>
       <div>
         <span style={{marginRight: '10px'}}>Кластеризация по признаку:</span>
-        <select onChange={(e) => {switchDataSet(e.target.value)}} id="selectClustering">
-          <option value="1" selected>Отрасль проекта</option>
-          <option value="2">ID проекта</option>
-          {/* <option value="3">DataSet3</option>
-          <option value="4">DataSet4</option> */}
-        </select>
+		<select
+		  value={selectedDataset} // use the value prop on the select
+		  onChange={(e) => {
+			setSelectedDataset(e.target.value); // set the new state when the selected option changes
+			switchDataSet(e.target.value); // and proceed with any other interaction needed
+		  }}
+		  id="selectClustering"
+		>
+		  {/* The option tags no longer need the 'selected' attribute */}
+		  <option value="1">Отрасль проекта</option>
+		  <option value="2">ID проекта</option>
+		  {/* <option value="3">DataSet3</option>
+		  <option value="4">DataSet4</option> */}
+		</select>
       </div>
       <ul>
         {sortedClusters.map((cluster) => {
