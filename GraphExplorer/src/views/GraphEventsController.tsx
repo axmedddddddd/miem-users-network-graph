@@ -18,11 +18,9 @@ const GraphEventsController: FC<{ setHoveredNode: (node: string | null) => void 
     registerEvents({
 		clickNode({ node }) {
 		  const label = graph.getNodeAttribute(node, "label");
-		  const urlAttributeString = graph.getNodeAttribute(node, "URL");
-		  
-		  console.log(`Node clicked: ${label}, URL: ${urlAttributeString}`); // Debug log
+		  const interests = graph.getNodeAttribute(node, "interests");
 
-		  if (!graph.getNodeAttribute(node, "hidden") && urlAttributeString) {
+		  if (!graph.getNodeAttribute(node, "hidden") && interests) {
 			const newWindow = window.open("", "_blank");
 
 			if (newWindow) {
@@ -42,7 +40,7 @@ const GraphEventsController: FC<{ setHoveredNode: (node: string | null) => void 
 				</head>
 				<body>
 				<h1>${label}</h1>
-				<p>${urlAttributeString}</p>
+				<p>Профессиональные интересы: ${interests}</p>
 				</body>
 				</html>
 			  `;

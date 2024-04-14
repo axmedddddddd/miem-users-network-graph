@@ -75,7 +75,7 @@ def prepare_dataframe(interests_dict: Dict[str, List[str]]) -> pd.DataFrame:
     return df
 
 
-def main() -> None:
+def main():
     client = ch.ClickHouseConnection(host=config.ch_host, port=config.ch_port, username=config.ch_user, password=config.ch_pass)
     
     df = client.read_database("SELECT * FROM sandbox.ongoing_projects")
@@ -83,14 +83,9 @@ def main() -> None:
     email_prefixes = extract_email_prefixes_and_short_names(df)
     interests_dict = enrich_with_interests(email_prefixes)
     final_df = prepare_dataframe(interests_dict)
-
+    
     client.read_database('TRUNCATE TABLE sandbox.professional_interests')
     client.write_database(df=final_df, table='professional_interests', schema='sandbox')
-    
-    final_df.set_index('name', inplace=True)
-    path_to_cache = os.path.join("/code/public/data", f"teacher_interests.json")
-    with open(path_to_cache, 'w', encoding='utf-8') as json_file:
-        json.dump(final_df['professional_interests'].to_dict(), json_file, ensure_ascii=False, indent=4)
     
     return
 

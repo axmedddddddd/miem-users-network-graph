@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from pydantic import Field
+import os
 
 class BaseConfig(BaseSettings):
     ch_host: str = Field(default="", env="CH_HOST")

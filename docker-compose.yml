@@ -11,9 +11,12 @@ services:
     build: ./GraphExplorer
     image: graphfront:latest
     ports:
-      - "8000:5000"
+      - "5000:5000"
     volumes:
       - shared-data:/code/public/data
+    depends_on:
+      backend:
+        condition: service_started
 
 volumes:
   shared-data:

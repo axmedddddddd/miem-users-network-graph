@@ -10,13 +10,8 @@ import os
 import graph
 import models
 from typing import List, Tuple, Any, Dict
-from footprint_dftools import clickhouse as ch
+from footprint_dftools.clickhouse import ClickHouseConnection
 
-from config import BaseConfig
-config = BaseConfig()
-
-from logger_config import setup_logger
-logger = setup_logger()
 
 palette = [
     "#001219",
@@ -39,9 +34,9 @@ class GroupChoices:
     INDUSTRY_LABEL = "projectIndustryLabel"
 
 
-def get_data_from_db() -> Dict[str, Any]:
+def get_projects_from_db(client: ClickHouseConnection) -> Dict[str, Any]:
     """Fetching table from CH"""
-    client = ch.ClickHouseConnection(host=config.ch_host, port=config.ch_port, username=config.ch_user, password=config.ch_pass)
+    
     df = client.read_database("SELECT * FROM sandbox.ongoing_projects")
     dict_data = df.to_dict(orient='records')
 
@@ -62,7 +57,8 @@ def get_data_from_db() -> Dict[str, Any]:
 
 
 def get_color(n: int, palette: List[str]) -> str:
-    """Get color for node based on tis key"""
+    """Get color for node based on its key"""
+    
     palette_size = len(palette)
 
     if n >= palette_size:
@@ -74,10 +70,11 @@ def get_color(n: int, palette: List[str]) -> str:
     return color
     
 def get_short_name(fullName):
+    """Get short russian name from full one"""
     name_parts = fullName.split()
-
+    
     if len(name_parts) >= 3:
-        short_name = f"{name_parts[0]} {name_parts[1][0]}.{name_parts[2][0]}."
+        short_name = f"{name_parts[0]} {name_parts[1][0]}. {name_parts[2][0]}."
     elif len(name_parts) == 2:
         short_name = f"{name_parts[0]} {name_parts[1][0]}."
     else:
@@ -88,22 +85,23 @@ def get_short_name(fullName):
 
 def extract_edges(project_data: dict, group_by: GroupChoices) -> Tuple[Any, Any, Any]:
     """Construct all the nodes and edges"""
+    
     team = project_data["detailed_team"]
-
+    
     leaders = project_data["leaders"]
-
+    
     team_nodes = []
     for member in team:
         full_name = member["fullName"]
         
         short_name = get_short_name(full_name)
-
+        
         if full_name is None:
             continue
-
+        
         user_id = f"user_{member['id']}"
         role = member["role"]
-
+        
         try:
             join_date = datetime.strptime(member["startDate"], "%d.%m.%Y")
         except ValueError:
@@ -112,7 +110,7 @@ def extract_edges(project_data: dict, group_by: GroupChoices) -> Tuple[Any, Any,
             continue
 
         now = datetime.now()
-
+        
         duration = now - join_date
         node = models.UserNode(
             id=user_id,
@@ -122,12 +120,12 @@ def extract_edges(project_data: dict, group_by: GroupChoices) -> Tuple[Any, Any,
             in_project_duration=duration.days,
         )
         team_nodes.append(node)
-
+    
     leader_nodes = []
     for leader in leaders:
-
+        
         if leader["middle_name"] and leader["first_name"]:
-            short_name = f"{leader['last_name']} {leader['first_name'][0]}.{leader['middle_name'][0]}"
+            short_name = f"{leader['last_name']} {leader['first_name'][0]}.{leader['middle_name'][0]}."
         elif leader["first_name"]:
             short_name = f"{leader['last_name']} {leader['first_name'][0]}."
         else:
@@ -137,10 +135,10 @@ def extract_edges(project_data: dict, group_by: GroupChoices) -> Tuple[Any, Any,
         ownerPrivilege = leader["ownerPrivilege"]
         if full_name is None or ownerPrivilege == 0:
             continue
-
+        
         user_id = f"user_{leader['id']}"
         role = leader["role"]
-
+        
         try:
             join_date = datetime.strptime(
                 project_data["dateCreated"], "%d.%m.%Y %H:%M:%S"
@@ -159,7 +157,7 @@ def extract_edges(project_data: dict, group_by: GroupChoices) -> Tuple[Any, Any,
             in_project_duration=duration.days,
         )
         leader_nodes.append(node)
-
+    
     group = project_data[group_by]
     project_id = f"project_{project_data['id']}"
 
@@ -177,7 +175,7 @@ def extract_edges(project_data: dict, group_by: GroupChoices) -> Tuple[Any, Any,
         )
         edges.append(edge)
         all_nodes[node.id] = node
-
+    
     for node in leader_nodes:
         edge = models.Edge(
             source=node,
@@ -191,16 +189,15 @@ def extract_edges(project_data: dict, group_by: GroupChoices) -> Tuple[Any, Any,
     return edges, all_nodes, project_node
 
 
-def make_graph(group_by: str = GroupChoices.INDUSTRY_LABEL) -> nx.Graph:
+def make_graph(ongoing_projects: Dict[str, Any], group_by: str = GroupChoices.INDUSTRY_LABEL) -> nx.Graph:
     """Make raw graph"""
-    data = get_data_from_db()
-
+    
     g = nx.DiGraph()
     nodes = {}
     project_nodes = {}
     group_to_id = {}
 
-    for project in data:
+    for project in ongoing_projects:
         project_edges, project_team, project_node = extract_edges(
             project, group_by=group_by
         )
@@ -243,11 +240,11 @@ def make_graph(group_by: str = GroupChoices.INDUSTRY_LABEL) -> nx.Graph:
     return g
 
 
-def formatted_graph(group: graph.GroupChoices, save_json: bool = False) -> None:
-    """Converting graph into proper view and caching as option"""
-    g = graph.make_graph(group_by=group)
+def formatted_graph(g: nx.Graph) -> Dict[str, Any]:
+    """Converting graph into proper view"""
+    
     g = nx.relabel.convert_node_labels_to_integers(g, label_attribute="node_id")
-
+    
     h = ig.Graph.from_networkx(g)
     
     rng = np.random.default_rng(10)
@@ -255,14 +252,14 @@ def formatted_graph(group: graph.GroupChoices, save_json: bool = False) -> None:
     
     np.random.seed(10)
     layout = h.layout_fruchterman_reingold(weights="width", grid=False, niter=2000, seed=start_positions)
-
+    
     tags = [
         models.Tag(key="Person", image="person.svg"),
         models.Tag(key="Tool", image="tool.svg"),
     ]
-
+    
     edges = []
-
+    
     exists_nodes = set()
     nodes = set()
     clusters = set()
@@ -291,7 +288,7 @@ def formatted_graph(group: graph.GroupChoices, save_json: bool = False) -> None:
             )
             nodes.add(source_node)
             exists_nodes.add(source)
-
+        
         if target not in exists_nodes:
             target_node = models.Node(
                 key=str(target),
@@ -305,7 +302,7 @@ def formatted_graph(group: graph.GroupChoices, save_json: bool = False) -> None:
             )
             nodes.add(target_node)
             exists_nodes.add(target)
-
+        
         cluster = models.Cluster(
             key=str(data["group_id"]), color=data["color"], clusterLabel=data["group"]
         )
@@ -313,18 +310,51 @@ def formatted_graph(group: graph.GroupChoices, save_json: bool = False) -> None:
     
     response = models.Response(nodes=nodes, edges=edges, clusters=clusters, tags=tags)
     
-    if save_json:
-        path_to_cache = os.path.join("/code/public/data", f"miem_{group}_graph.json")
-        
-        with open(path_to_cache, "w", encoding="utf-8") as f:
-            json.dump(response.dict(), f, ensure_ascii=False)
-        
-        logger.info("Successfully built graph by %s", group)
+    return response.dict()
+
+
+def insert_interests(client: ClickHouseConnection, dict_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Fetch professional interests information and insert it into json on place of URL"""
     
+    interests_df = client.read_database('SELECT * FROM sandbox.professional_interests')
+    interests_dict = {row['name']: row['professional_interests'] for index, row in interests_df.iterrows()}
     
-    return
+    for node in dict_data["nodes"]:
+        node_label = node.get("label", "")
+        if node_label in interests_dict:
+            node["interests"] = interests_dict[node_label]
+        node.pop("URL", None)
+        if "interests" not in node:
+            node["interests"] = ""
+    
+    return dict_data
+
+
+def main():
+    
+    from config import BaseConfig
+    config = BaseConfig()
+    
+    from logger_config import setup_logger
+    logger = setup_logger()
+        
+    client = ClickHouseConnection(host=config.ch_host, port=config.ch_port, username=config.ch_user, password=config.ch_pass)
+    ongoing_projects = get_projects_from_db(client)
+    
+    IndustryLabel_graph = make_graph(ongoing_projects, graph.GroupChoices.INDUSTRY_LABEL)
+    IndustryLabel_graph = formatted_graph(IndustryLabel_graph)
+    IndustryLabel_graph = insert_interests(client, IndustryLabel_graph)
+    with open("/code/public/data/miem_projectIndustryLabel_graph.json", "w", encoding="utf-8") as f:
+        json.dump(IndustryLabel_graph, f, ensure_ascii=False)
+    logger.info("Successfully built graph by projectIndustryLabel")
+    
+    id_graph = make_graph(ongoing_projects, graph.GroupChoices.ID)
+    id_graph = formatted_graph(id_graph)
+    id_graph = insert_interests(client, id_graph)
+    with open("/code/public/data/miem_id_graph.json", "w", encoding="utf-8") as f:
+        json.dump(id_graph, f, ensure_ascii=False)
+    logger.info("Successfully built graph by id")
 
 
 if __name__ == "__main__":
-    formatted_graph(group=graph.GroupChoices.INDUSTRY_LABEL, save_json=True)
-    formatted_graph(group=graph.GroupChoices.ID, save_json=True)
+    main()

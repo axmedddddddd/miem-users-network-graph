@@ -52,20 +52,12 @@ const Root: FC = () => {
 		  requestAnimationFrame(() => setDataReady(true));
 		});
 	};
-
-  useEffect(() => {
-    // Immediately fetch data when the component mounts
-    fetchData();
   
-    const interval = setInterval(() => {
-      const now = new Date();
-      // Check if it's Monday and 8 o'clock
-      if (now.getDay() === 1 && now.getHours() === 8) {
-        fetchData();
-      }
-    }, 1000 * 60 * 60); // Check every hour
+  useEffect(() => {
+    fetchData();
+	
+	const interval = setInterval(fetchData, 1000 * 60 * 60);
     
-    // Cleanup interval on component unmount
     return () => clearInterval(interval);
   }, [stateDataSet]);
 
