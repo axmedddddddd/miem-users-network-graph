@@ -40,7 +40,7 @@ const GraphEventsController: FC<{ setHoveredNode: (node: string | null) => void 
 				</head>
 				<body>
 				<h1>${label}</h1>
-				<p>Профессиональные интересы: ${interests}</p>
+				<p><b>Профессиональные интересы:</b> ${interests}</p>
 				</body>
 				</html>
 			  `;

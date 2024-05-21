@@ -9,8 +9,8 @@ import ast
 import os
 import graph
 import models
+import requests
 from typing import List, Tuple, Any, Dict
-from footprint_dftools.clickhouse import ClickHouseConnection
 
 
 palette = [
@@ -34,15 +34,24 @@ class GroupChoices:
     INDUSTRY_LABEL = "projectIndustryLabel"
 
 
-def get_projects_from_db(client: ClickHouseConnection) -> Dict[str, Any]:
+def get_projects_from_db(base_url: str, access_token: str) -> Dict[str, Any]:
     """Fetching table from CH"""
     
-    df = client.read_database("SELECT * FROM sandbox.ongoing_projects")
-    dict_data = df.to_dict(orient='records')
-
+    project_data = requests.post(
+        base_url + "/graph/tables_data",
+        headers={
+            "Content-Type": "application/json",
+            "accept": "application/json",
+            "Authorization": f"Bearer {access_token}",
+        },
+        json={
+            "source": "projects"
+        }
+    ).json()['source_data']
+    
     json_fields = ['team', 'vacancyData', 'detailed_team', 'leaders']
     
-    for record in dict_data:
+    for record in project_data:
         for field in json_fields:
             if field in record and record[field]:
                 try:
@@ -53,7 +62,7 @@ def get_projects_from_db(client: ClickHouseConnection) -> Dict[str, Any]:
                     except (ValueError, SyntaxError) as e:
                         print(f"Error evaluating JSON for {field} in record {record.get('id', 'Unknown')}: {e}")
 
-    return dict_data
+    return project_data
 
 
 def get_color(n: int, palette: List[str]) -> str:
@@ -313,44 +322,67 @@ def formatted_graph(g: nx.Graph) -> Dict[str, Any]:
     return response.dict()
 
 
-def insert_interests(client: ClickHouseConnection, dict_data: Dict[str, Any]) -> Dict[str, Any]:
+def insert_interests(base_url: str, access_token: str, project_data: Dict[str, Any]) -> Dict[str, Any]:
     """Fetch professional interests information and insert it into json on place of URL"""
     
-    interests_df = client.read_database('SELECT * FROM sandbox.professional_interests')
-    interests_dict = {row['name']: row['professional_interests'] for index, row in interests_df.iterrows()}
+    interests_response = requests.post(
+        base_url + "/graph/tables_data",
+        headers={
+            "Content-Type": "application/json",
+            "accept": "application/json",
+            "Authorization": f"Bearer {access_token}",
+        },
+        json={
+            "source": "interests"
+        }
+    )
     
-    for node in dict_data["nodes"]:
+    interests_data = interests_response.json().get('source_data', [])
+    
+    interests_lookup = {entry["name"]: entry["professional_interests"] for entry in interests_data}
+    
+    for node in project_data.get("nodes", []):
         node_label = node.get("label", "")
-        if node_label in interests_dict:
-            node["interests"] = interests_dict[node_label]
-        node.pop("URL", None)
-        if "interests" not in node:
+        if node_label in interests_lookup:
+            node["interests"] = interests_lookup[node_label]
+        else:
             node["interests"] = ""
+        node.pop("URL", None)
     
-    return dict_data
+    return project_data
 
 
 def main():
     
     from config import BaseConfig
-    config = BaseConfig()
+    CONFIG = BaseConfig()
     
     from logger_config import setup_logger
     logger = setup_logger()
-        
-    client = ClickHouseConnection(host=config.ch_host, port=config.ch_port, username=config.ch_user, password=config.ch_pass)
-    ongoing_projects = get_projects_from_db(client)
+    
+    username = CONFIG.api_user
+    password = CONFIG.api_pass
+    base_url = CONFIG.api_url
+    
+    auth_response = requests.post(
+        base_url + "/authentication_token",
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        data={"username": username, "password": password}
+    ).json()
+    
+    access_token = auth_response["access_token"]
+    ongoing_projects = get_projects_from_db(base_url, access_token)
     
     IndustryLabel_graph = make_graph(ongoing_projects, graph.GroupChoices.INDUSTRY_LABEL)
     IndustryLabel_graph = formatted_graph(IndustryLabel_graph)
-    IndustryLabel_graph = insert_interests(client, IndustryLabel_graph)
+    IndustryLabel_graph = insert_interests(base_url, access_token, IndustryLabel_graph)
     with open("/code/public/data/miem_projectIndustryLabel_graph.json", "w", encoding="utf-8") as f:
         json.dump(IndustryLabel_graph, f, ensure_ascii=False)
     logger.info("Successfully built graph by projectIndustryLabel")
     
     id_graph = make_graph(ongoing_projects, graph.GroupChoices.ID)
     id_graph = formatted_graph(id_graph)
-    id_graph = insert_interests(client, id_graph)
+    id_graph = insert_interests(base_url, access_token, id_graph)
     with open("/code/public/data/miem_id_graph.json", "w", encoding="utf-8") as f:
         json.dump(id_graph, f, ensure_ascii=False)
     logger.info("Successfully built graph by id")

@@ -6,7 +6,9 @@ services:
     image: graphback:latest
     volumes:
       - shared-data:/code/public/data
-
+    env_file:
+      - ./GraphMaker/.env
+  
   frontend:
     build: ./GraphExplorer
     image: graphfront:latest

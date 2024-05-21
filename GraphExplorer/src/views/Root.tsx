@@ -56,7 +56,7 @@ const Root: FC = () => {
   useEffect(() => {
     fetchData();
 	
-	const interval = setInterval(fetchData, 1000 * 60 * 60);
+	const interval = setInterval(fetchData, 1000 * 60 * 60 * 24); //every day
     
     return () => clearInterval(interval);
   }, [stateDataSet]);

@@ -2,7 +2,7 @@ FROM node:latest
 
 WORKDIR /code
 
-COPY ./.env /code/.env 
+COPY ./.env /code/.env
 COPY ./package.json /code/package.json
 COPY ./package-lock.json /code/package-lock.json
 
