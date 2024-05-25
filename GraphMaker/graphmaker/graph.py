@@ -9,9 +9,9 @@ import ast
 import os
 import graph
 import models
-import requests
 from typing import List, Tuple, Any, Dict
 
+import api_methods
 
 palette = [
     "#001219",
@@ -37,17 +37,7 @@ class GroupChoices:
 def get_projects_from_db(base_url: str, access_token: str) -> Dict[str, Any]:
     """Fetching table from CH"""
     
-    project_data = requests.post(
-        base_url + "/graph/tables_data",
-        headers={
-            "Content-Type": "application/json",
-            "accept": "application/json",
-            "Authorization": f"Bearer {access_token}",
-        },
-        json={
-            "source": "projects"
-        }
-    ).json()['source_data']
+    project_data = api_methods.fetch_table_data(base_url, access_token, "projects")
     
     json_fields = ['team', 'vacancyData', 'detailed_team', 'leaders']
     
@@ -325,19 +315,7 @@ def formatted_graph(g: nx.Graph) -> Dict[str, Any]:
 def insert_interests(base_url: str, access_token: str, project_data: Dict[str, Any]) -> Dict[str, Any]:
     """Fetch professional interests information and insert it into json on place of URL"""
     
-    interests_response = requests.post(
-        base_url + "/graph/tables_data",
-        headers={
-            "Content-Type": "application/json",
-            "accept": "application/json",
-            "Authorization": f"Bearer {access_token}",
-        },
-        json={
-            "source": "interests"
-        }
-    )
-    
-    interests_data = interests_response.json().get('source_data', [])
+    interests_data = api_methods.fetch_table_data(base_url, access_token, "interests")
     
     interests_lookup = {entry["name"]: entry["professional_interests"] for entry in interests_data}
     
@@ -360,29 +338,19 @@ def main():
     from logger_config import setup_logger
     logger = setup_logger()
     
-    username = CONFIG.api_user
-    password = CONFIG.api_pass
-    base_url = CONFIG.api_url
-    
-    auth_response = requests.post(
-        base_url + "/authentication_token",
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-        data={"username": username, "password": password}
-    ).json()
-    
-    access_token = auth_response["access_token"]
-    ongoing_projects = get_projects_from_db(base_url, access_token)
+    access_token = api_methods.get_access_token(CONFIG.api_url, CONFIG.api_user, CONFIG.api_pass)
+    ongoing_projects = get_projects_from_db(CONFIG.api_url, access_token)
     
     IndustryLabel_graph = make_graph(ongoing_projects, graph.GroupChoices.INDUSTRY_LABEL)
     IndustryLabel_graph = formatted_graph(IndustryLabel_graph)
-    IndustryLabel_graph = insert_interests(base_url, access_token, IndustryLabel_graph)
+    IndustryLabel_graph = insert_interests(CONFIG.api_url, access_token, IndustryLabel_graph)
     with open("/code/public/data/miem_projectIndustryLabel_graph.json", "w", encoding="utf-8") as f:
         json.dump(IndustryLabel_graph, f, ensure_ascii=False)
     logger.info("Successfully built graph by projectIndustryLabel")
     
     id_graph = make_graph(ongoing_projects, graph.GroupChoices.ID)
     id_graph = formatted_graph(id_graph)
-    id_graph = insert_interests(base_url, access_token, id_graph)
+    id_graph = insert_interests(CONFIG.api_url, access_token, id_graph)
     with open("/code/public/data/miem_id_graph.json", "w", encoding="utf-8") as f:
         json.dump(id_graph, f, ensure_ascii=False)
     logger.info("Successfully built graph by id")
